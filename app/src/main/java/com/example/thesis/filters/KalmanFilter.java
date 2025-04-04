@@ -13,14 +13,14 @@ public class KalmanFilter {
     public KalmanFilter() {
     }
 
-    public ArrayList<Double> filterData(double[] data) {
-        double x = data[0];
+    public ArrayList<Double> filterData(ArrayList<Double> data) {
+        double x = data.get(0);
         ArrayList<Double> filteredData = new ArrayList<>();
-        for(int i = 0; i < data.length; i++) {
+        for(int i = 0; i < data.size(); i++) {
             p = p + q;
             k = p / (p + r);
             p = (1 - k) * p;
-            x = x + k * (data[i] - x);
+            x = x + k * (data.get(i) - x);
             filteredData.add(x);
         }
 

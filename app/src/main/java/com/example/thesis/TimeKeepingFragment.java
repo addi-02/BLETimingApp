@@ -27,7 +27,10 @@ import com.example.thesis.filters.SimpleMovingAverageFilter;
 
 import org.w3c.dom.Text;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Objects;
 
 public class TimeKeepingFragment extends Fragment {
 
@@ -48,11 +51,13 @@ public class TimeKeepingFragment extends Fragment {
     private KalmanFilter kmnFilter = new KalmanFilter();
     private ExponentialMovingAverageFilter emaFilter = new ExponentialMovingAverageFilter();
     private SimpleMovingAverageFilter smaFilter = new SimpleMovingAverageFilter();
-
+    private ArrayList<Double> rssiResults = new ArrayList<Double>();
+    private ArrayList<String> timestamps = new ArrayList<String>();
+    private boolean isScanning = false;
     private static final int REQUEST_CODE_PERMISSIONS = 1001;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
-    private MutableLiveData<Integer> rssiData = new MutableLiveData<>();
+    private MutableLiveData<String> rssiData = new MutableLiveData<>();
     public TimeKeepingFragment() {
         // Required empty public constructor
     }
@@ -61,10 +66,11 @@ public class TimeKeepingFragment extends Fragment {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             String deviceAddress = result.getDevice().getAddress();
-            if(deviceAddress == "C4:3D:1A:F6:D3:61") {
-                rssiData.setValue(result.getRssi());
+            if(Objects.equals(deviceAddress, "C4:3D:1A:F6:D3:61")) {
+                rssiResults.add((double)result.getRssi());
+                Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                timestamps.add(timestamp.toString());
             }
-            Log.d("BLE", "Beacon detected: " + deviceAddress + " | RSSI: " + rssiData.getValue().toString());
         }
 
         @Override
@@ -112,17 +118,25 @@ public class TimeKeepingFragment extends Fragment {
         btnKalman.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ArrayList<Double> filtered = new ArrayList<>();
-                double[] test = new double[]{
-                        -22.63, -25.09, -20.26, -21.74, -18.22, -20.66, -13.64, -12.87, -10.54, -10.95,
-                        -6.76, -10.21, -7.79, -7.77, -6.14, -2.63, -2.08,  2.99, -0.08, -1.78,
-                        1.24, -1.86, -3.29, -1.25, -3.44, -1.37,  5.11, -3.53,  0.57, -1.13,
-                        1.44, -1.80, -5.61, -1.34, -5.63, -3.48, -6.47, -7.69, -8.37, -8.71,
-                        -10.85, -12.59, -11.96, -15.07, -12.42, -16.73, -16.19, -20.23, -24.16, -23.49
-};
+                if(isScanning) {
+                    ArrayList<Double> filtered = new ArrayList<>();
 
-                filtered = smaFilter.filterData(test);
-                Log.w("test", filtered.toString());
+                    /**
+                     * Dummy data, a noisy -x^2 plot
+                     * double[] test = new double[]{
+                            -22.63, -25.09, -20.26, -21.74, -18.22, -20.66, -13.64, -12.87, -10.54, -10.95,
+                            -6.76, -10.21, -7.79, -7.77, -6.14, -2.63, -2.08, 2.99, -0.08, -1.78,
+                            1.24, -1.86, -3.29, -1.25, -3.44, -1.37, 5.11, -3.53, 0.57, -1.13,
+                            1.44, -1.80, -5.61, -1.34, -5.63, -3.48, -6.47, -7.69, -8.37, -8.71,
+                            -10.85, -12.59, -11.96, -15.07, -12.42, -16.73, -16.19, -20.23, -24.16, -23.49
+                    };**/
+
+                    filtered = kmnFilter.filterData(rssiResults);
+                    double closest = Collections.max(filtered);
+                    int closestValue = filtered.indexOf(closest);
+                    rssiData.setValue(timestamps.get(closestValue));
+                    Log.w("test", filtered.toString());
+                }
             }
         });
 
@@ -136,16 +150,20 @@ public class TimeKeepingFragment extends Fragment {
         btnStartScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startScan();
+                if(!isScanning) {
+                    startScan();
+                } else {
+                    stopScan();
+                }
             }
         });
 
         // Observer for the RSSI values so that the text displaying the current measured RSSI can
         // be updated in real-time
-        final Observer<Integer> rssiObserver = new Observer<Integer>() {
+        final Observer<String> rssiObserver = new Observer<String>() {
             @Override
-            public void onChanged(Integer newRssi) {
-                textScanning.setText(newRssi.toString());
+            public void onChanged(String newRssi) {
+                textScanning.setText(newRssi);
             }
         };
         rssiData.observe(getViewLifecycleOwner(), rssiObserver);
@@ -160,7 +178,27 @@ public class TimeKeepingFragment extends Fragment {
             if (bluetoothLeScanner != null) {
                 // Starts the BLE scanner using the callback function to define wanted behaviour upon receiving a signal
                 bluetoothLeScanner.startScan(scanCallback);
+                isScanning = true;
                 Log.w("TAG", "Bluetooth scanning started.");
+            } else {
+                Log.e("TAG", "Bluetooth LE Scanner is null.");
+            }
+        } else {
+            requestPermissions(new String[]{
+                    android.Manifest.permission.BLUETOOTH_SCAN,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+            }, REQUEST_CODE_PERMISSIONS);
+        }
+    }
+    private void stopScan() {
+        if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+            if (bluetoothLeScanner != null) {
+                // Starts the BLE scanner using the callback function to define wanted behaviour upon receiving a signal
+                bluetoothLeScanner.stopScan(scanCallback);
+                isScanning = false;
+                Log.w("TAG", "Bluetooth scanning stopped.");
             } else {
                 Log.e("TAG", "Bluetooth LE Scanner is null.");
             }
