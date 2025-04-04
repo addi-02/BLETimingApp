@@ -47,7 +47,7 @@ public class TimeKeepingFragment extends Fragment {
 
     private KalmanFilter kmnFilter = new KalmanFilter();
     private ExponentialMovingAverageFilter emaFilter = new ExponentialMovingAverageFilter();
-    private SimpleMovingAverageFilter smaFilter;
+    private SimpleMovingAverageFilter smaFilter = new SimpleMovingAverageFilter();
 
     private static final int REQUEST_CODE_PERMISSIONS = 1001;
     private BluetoothAdapter bluetoothAdapter;
@@ -61,7 +61,9 @@ public class TimeKeepingFragment extends Fragment {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             String deviceAddress = result.getDevice().getAddress();
-            rssiData.setValue(result.getRssi());
+            if(deviceAddress == "C4:3D:1A:F6:D3:61") {
+                rssiData.setValue(result.getRssi());
+            }
             Log.d("BLE", "Beacon detected: " + deviceAddress + " | RSSI: " + rssiData.getValue().toString());
         }
 
@@ -102,6 +104,7 @@ public class TimeKeepingFragment extends Fragment {
                              Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_time_keeping, container, false);
 
+        // Buttons for selection of the individual filtering algorithms
         Button btnKalman = v.findViewById(R.id.button_kalman);
         Button btnEMA = v.findViewById(R.id.button_ema);
         Button btnSMA = v.findViewById(R.id.button_sma);
@@ -118,15 +121,16 @@ public class TimeKeepingFragment extends Fragment {
                         -10.85, -12.59, -11.96, -15.07, -12.42, -16.73, -16.19, -20.23, -24.16, -23.49
 };
 
-                filtered = kmnFilter.filterData(test);
+                filtered = smaFilter.filterData(test);
                 Log.w("test", filtered.toString());
             }
         });
 
-
+        // Initialization of the Bluetooth classes
         BluetoothManager bluetoothManager = (BluetoothManager) requireContext().getSystemService(getContext().BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+
         Button btnStartScan = v.findViewById(R.id.button_start_scan);
         TextView textScanning = v.findViewById(R.id.text_is_scanning);
         btnStartScan.setOnClickListener(new View.OnClickListener() {
@@ -135,6 +139,9 @@ public class TimeKeepingFragment extends Fragment {
                 startScan();
             }
         });
+
+        // Observer for the RSSI values so that the text displaying the current measured RSSI can
+        // be updated in real-time
         final Observer<Integer> rssiObserver = new Observer<Integer>() {
             @Override
             public void onChanged(Integer newRssi) {
@@ -151,6 +158,7 @@ public class TimeKeepingFragment extends Fragment {
                 ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
             if (bluetoothLeScanner != null) {
+                // Starts the BLE scanner using the callback function to define wanted behaviour upon receiving a signal
                 bluetoothLeScanner.startScan(scanCallback);
                 Log.w("TAG", "Bluetooth scanning started.");
             } else {
