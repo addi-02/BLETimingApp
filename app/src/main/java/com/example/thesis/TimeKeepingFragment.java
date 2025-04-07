@@ -70,6 +70,7 @@ public class TimeKeepingFragment extends Fragment {
                 rssiResults.add((double)result.getRssi());
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
                 timestamps.add(timestamp.toString());
+
             }
         }
 
@@ -118,7 +119,7 @@ public class TimeKeepingFragment extends Fragment {
         btnKalman.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(isScanning) {
+                if(!isScanning) {
                     ArrayList<Double> filtered = new ArrayList<>();
 
                     /**
@@ -135,7 +136,7 @@ public class TimeKeepingFragment extends Fragment {
                     double closest = Collections.max(filtered);
                     int closestValue = filtered.indexOf(closest);
                     rssiData.setValue(timestamps.get(closestValue));
-                    Log.w("test", filtered.toString());
+                    Log.w("test", filtered.toString() + timestamps.toString());
                 }
             }
         });
