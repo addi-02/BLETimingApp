@@ -145,7 +145,6 @@ public class TimeKeepingFragment extends Fragment {
                         rssiData.setValue("Getting time failed");
                     }
 
-                    Log.w("test", filtered.toString() + timestamps.toString());
                 }
             }
         });
