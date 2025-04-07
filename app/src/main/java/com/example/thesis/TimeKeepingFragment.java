@@ -131,11 +131,20 @@ public class TimeKeepingFragment extends Fragment {
                             1.44, -1.80, -5.61, -1.34, -5.63, -3.48, -6.47, -7.69, -8.37, -8.71,
                             -10.85, -12.59, -11.96, -15.07, -12.42, -16.73, -16.19, -20.23, -24.16, -23.49
                     };**/
+                    try {
+                        filtered = kmnFilter.filterData(rssiResults);
 
-                    filtered = kmnFilter.filterData(rssiResults);
-                    double closest = Collections.max(filtered);
-                    int closestValue = filtered.indexOf(closest);
-                    rssiData.setValue(timestamps.get(closestValue));
+                    } catch (Exception e) {
+                        rssiData.setValue("Filtering failed");
+                    }
+                    try {
+                        double closest = Collections.max(filtered);
+                        int closestValue = filtered.indexOf(closest);
+                        rssiData.setValue(timestamps.get(closestValue));
+                    } catch (Exception e) {
+                        rssiData.setValue("Getting time failed");
+                    }
+
                     Log.w("test", filtered.toString() + timestamps.toString());
                 }
             }
