@@ -49,10 +49,12 @@ public class MacAdapter extends RecyclerView.Adapter<MacAdapter.MacViewHolder> {
             btnDelete = itemView.findViewById(R.id.button_delete);
 
             btnDelete.setOnClickListener(new View.OnClickListener() {
-                int position = getAdapterPosition();
                 @Override
                 public void onClick(View view) {
-                    deleteClickListener.onDelete(position);
+                    int position = getAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION) {
+                        deleteClickListener.onDelete(position);
+                    }
                 }
             });
         }
