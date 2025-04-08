@@ -8,14 +8,14 @@ public class SimpleMovingAverageFilter {
 
     }
 
-    public ArrayList<Double> filterData(double[] data) {
+    public ArrayList<Double> filterData(ArrayList<Double> data) {
         ArrayList<Double> filteredData = new ArrayList<Double>();
         int n = 3;
-        for(int i = 0; i < data.length; i++) {
+        for(int i = 0; i < data.size(); i++) {
             if(i+1 < n) {
                 continue;
             }
-            double newRSSI = ((double) 1 /n)*(data[i-2]+data[i-1]+data[i]);
+            double newRSSI = ((double) 1 /n)*(data.get(i - 2) + data.get(i - 1) + data.get(i));
             filteredData.add(newRSSI);
         }
         return filteredData;

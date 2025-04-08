@@ -5,7 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class KalmanFilter {
-
+    /** Values during first successful test
+    private double q = 0.1;
+    private double r = 2;
+    private double p = 0.75;
+    private double k = 0.1;
+    **/
     private double q = 0.1;
     private double r = 2;
     private double p = 0.75;

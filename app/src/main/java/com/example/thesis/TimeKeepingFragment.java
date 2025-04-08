@@ -5,7 +5,11 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -14,12 +18,15 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.thesis.filters.ExponentialMovingAverageFilter;
 import com.example.thesis.filters.KalmanFilter;
@@ -27,8 +34,14 @@ import com.example.thesis.filters.SimpleMovingAverageFilter;
 
 import org.w3c.dom.Text;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.sql.Array;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Objects;
 
@@ -66,10 +79,11 @@ public class TimeKeepingFragment extends Fragment {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             String deviceAddress = result.getDevice().getAddress();
-            if(Objects.equals(deviceAddress, "C4:3D:1A:F6:D3:61")) {
+            if(Objects.equals(deviceAddress, "CD:D7:E9:7E:31:9E")) {
                 rssiResults.add((double)result.getRssi());
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
                 timestamps.add(timestamp.toString());
+                rssiData.setValue(String.valueOf(result.getRssi()));
 
             }
         }
@@ -115,34 +129,79 @@ public class TimeKeepingFragment extends Fragment {
         Button btnKalman = v.findViewById(R.id.button_kalman);
         Button btnEMA = v.findViewById(R.id.button_ema);
         Button btnSMA = v.findViewById(R.id.button_sma);
-
+        TextView textTimestamps = v.findViewById(R.id.text_timestamps);
         btnKalman.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if(!isScanning) {
                     ArrayList<Double> filtered = new ArrayList<>();
 
-                    /**
-                     * Dummy data, a noisy -x^2 plot
-                     * double[] test = new double[]{
-                            -22.63, -25.09, -20.26, -21.74, -18.22, -20.66, -13.64, -12.87, -10.54, -10.95,
-                            -6.76, -10.21, -7.79, -7.77, -6.14, -2.63, -2.08, 2.99, -0.08, -1.78,
-                            1.24, -1.86, -3.29, -1.25, -3.44, -1.37, 5.11, -3.53, 0.57, -1.13,
-                            1.44, -1.80, -5.61, -1.34, -5.63, -3.48, -6.47, -7.69, -8.37, -8.71,
-                            -10.85, -12.59, -11.96, -15.07, -12.42, -16.73, -16.19, -20.23, -24.16, -23.49
-                    };**/
                     try {
                         filtered = kmnFilter.filterData(rssiResults);
 
                     } catch (Exception e) {
                         rssiData.setValue("Filtering failed");
                     }
+                    saveToDownloadsWithMediaStore(requireContext(), filtered, "rssi_values");
                     try {
                         double closest = Collections.max(filtered);
                         int closestValue = filtered.indexOf(closest);
-                        rssiData.setValue(timestamps.get(closestValue));
+                        textTimestamps.setText(timestamps.get(closestValue));
                     } catch (Exception e) {
-                        rssiData.setValue("Getting time failed");
+                        rssiData.setValue("Getting time failed" + filtered.toString());
+                        textTimestamps.setText(timestamps.toString());
+                    }
+
+                }
+            }
+        });
+
+        btnEMA.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(!isScanning) {
+                    ArrayList<Double> filtered = new ArrayList<>();
+
+                    try {
+                        filtered = emaFilter.filterData(rssiResults);
+
+                    } catch (Exception e) {
+                        rssiData.setValue("Filtering failed");
+                    }
+                    saveToDownloadsWithMediaStore(requireContext(), filtered, "rssi_values");
+                    try {
+                        double closest = Collections.max(filtered);
+                        int closestValue = filtered.indexOf(closest);
+                        textTimestamps.setText(timestamps.get(closestValue));
+                    } catch (Exception e) {
+                        rssiData.setValue("Getting time failed" + filtered.toString());
+                        textTimestamps.setText(timestamps.toString());
+                    }
+
+                }
+            }
+        });
+
+        btnSMA.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(!isScanning) {
+                    ArrayList<Double> filtered = new ArrayList<>();
+
+                    try {
+                        filtered = smaFilter.filterData(rssiResults);
+
+                    } catch (Exception e) {
+                        rssiData.setValue("Filtering failed");
+                    }
+                    saveToDownloadsWithMediaStore(requireContext(), filtered, "rssi_values");
+                    try {
+                        double closest = Collections.max(filtered);
+                        int closestValue = filtered.indexOf(closest);
+                        textTimestamps.setText(timestamps.get(closestValue));
+                    } catch (Exception e) {
+                        rssiData.setValue("Getting time failed" + filtered.toString());
+                        textTimestamps.setText(timestamps.toString());
                     }
 
                 }
@@ -218,4 +277,34 @@ public class TimeKeepingFragment extends Fragment {
             }, REQUEST_CODE_PERMISSIONS);
         }
     }
+
+    public void saveToDownloadsWithMediaStore(Context context, ArrayList<Double> data, String filename) {
+        String mimeType = "text/plain";
+        String relativeLocation = Environment.DIRECTORY_DOWNLOADS;
+
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.Downloads.DISPLAY_NAME, filename);
+        contentValues.put(MediaStore.Downloads.MIME_TYPE, mimeType);
+        contentValues.put(MediaStore.Downloads.RELATIVE_PATH, relativeLocation);
+
+        ContentResolver resolver = context.getContentResolver();
+        Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);
+
+        if (uri != null) {
+            try (OutputStream outputStream = resolver.openOutputStream(uri)) {
+                for (Double value : data) {
+                    String line = value.toString() + "\n";
+                    outputStream.write(line.getBytes(StandardCharsets.UTF_8));
+                }
+                outputStream.flush();
+                Toast.makeText(context, "Saved to Downloads", Toast.LENGTH_SHORT).show();
+                Log.d("MediaStore", "Saved to: " + uri.toString());
+            } catch (IOException e) {
+                Log.e("MediaStore", "Write failed: " + e.getMessage());
+            }
+        } else {
+            Log.e("MediaStore", "Failed to create MediaStore entry");
+        }
+    }
+
 }

@@ -8,18 +8,18 @@ public class ExponentialMovingAverageFilter {
 
     }
 
-    public ArrayList<Double> filterData(double[] data) {
+    public ArrayList<Double> filterData(ArrayList<Double> data) {
         int n = 5;
         double a = (double) 2 /(n+1);
-        double prevRSSI = data[0];
+        double prevRSSI = data.get(0);
         double newRSSI = 0;
         ArrayList<Double> filteredData = new ArrayList<>();
-        for(int i = 0; i < data.length; i++) {
+        for(int i = 0; i < data.size(); i++) {
             if(i < 1) {
-                filteredData.add(data[0]);
+                filteredData.add(data.get(0));
                 continue;
             }
-            newRSSI = a*data[i]+(1-a)*prevRSSI;
+            newRSSI = a* data.get(i) +(1-a)*prevRSSI;
 
             filteredData.add(newRSSI);
             prevRSSI = newRSSI;
