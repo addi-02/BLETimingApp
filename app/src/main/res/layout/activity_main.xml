@@ -8,8 +8,8 @@
     tools:context=".MainActivity">
 
     <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/frameLayout2"
-        android:name="com.example.thesis.TracksFragment"
+        android:id="@+id/frameLayout3"
+        android:name="com.example.thesis.TrackListFragment"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"

@@ -74,17 +74,23 @@ public class TimeKeepingFragment extends Fragment {
     public TimeKeepingFragment() {
         // Required empty public constructor
     }
+    TrackManager tm = new TrackManager(requireContext());
 
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             String deviceAddress = result.getDevice().getAddress();
-            if(Objects.equals(deviceAddress, "CD:D7:E9:7E:31:9E")) {
-                rssiResults.add((double)result.getRssi());
-                Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-                timestamps.add(timestamp.toString());
-                rssiData.setValue(String.valueOf(result.getRssi()));
+            ArrayList<Track> tracks = tm.getTracks();
+            for(Track track : tracks) {
+                if(Arrays.asList(track.getAddressStrings("start")).contains(deviceAddress)) {
+                    rssiResults.add((double)result.getRssi());
+                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                    timestamps.add(timestamp.toString());
+                    rssiData.setValue(String.valueOf(result.getRssi()));
 
+                } else if(Arrays.asList(track.getAddressStrings("start")).contains(deviceAddress)){
+
+                }
             }
         }
 

@@ -1,14 +1,11 @@
 package com.example.thesis;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,15 +16,16 @@ import java.util.ArrayList;
 
 /**
  * A simple {@link Fragment} subclass.
- * Use the {@link TracksFragment#newInstance} factory method to
+ * Use the {@link TrackFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class TracksFragment extends Fragment {
+public class TrackFragment extends Fragment {
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
+    private static final String ARG_TRACK = "arg_track";
 
     // TODO: Rename and change types of parameters
     private String mParam1;
@@ -36,8 +34,9 @@ public class TracksFragment extends Fragment {
     private ArrayList<MacAddress> macListFinish = new ArrayList<>();
     private MacAdapter adapterStart;
     private String trackName = "Test";
+    private Track track;
     private MacAdapter adapterFinish;
-    public TracksFragment() {
+    public TrackFragment() {
         // Required empty public constructor
     }
 
@@ -50,11 +49,10 @@ public class TracksFragment extends Fragment {
      * @return A new instance of fragment TracksFragment.
      */
     // TODO: Rename and change types and number of parameters
-    public static TracksFragment newInstance(String param1, String param2) {
-        TracksFragment fragment = new TracksFragment();
+    public static TrackFragment newInstance(Track track) {
+        TrackFragment fragment = new TrackFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
+        args.putSerializable(ARG_TRACK, track);
         fragment.setArguments(args);
         return fragment;
     }
@@ -62,9 +60,8 @@ public class TracksFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+        if (getArguments() != null && track == null) {
+            track = (Track) getArguments().getSerializable(ARG_TRACK);
         }
     }
 
@@ -74,25 +71,31 @@ public class TracksFragment extends Fragment {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_tracks, container, false);
         RecyclerView macAddressesStart = v.findViewById(R.id.rv_mac_addresses_start);
-        MacAddress mcStart = new MacAddress("hejsan");
-        macListStart = loadMacListStart();
-        macListFinish = loadMacListFinish();
+        track = new Track("addi", new ArrayList<>(), new ArrayList<>());
+        track.setContext(requireContext());
+        track.loadMacList();
+        trackName = track.getTrackName();
+        macListStart = track.getAddresses("start");
+        macListFinish = track.getAddresses("finish");
+
         adapterStart = new MacAdapter(macListStart, position -> {
             macListStart.remove(position);
             adapterStart.notifyItemRemoved(position);
-            saveMacListStart();
+            track.saveMacListStart(macListStart);
         });
 
         macAddressesStart.setLayoutManager(new LinearLayoutManager(getContext()));
         macAddressesStart.setAdapter(adapterStart);
 
         RecyclerView macAddressesFinish = v.findViewById(R.id.rv_mac_addresses_finish);
-        MacAddress mcFinish = new MacAddress("hejdå");
         adapterFinish = new MacAdapter(macListFinish, position -> {
             macListFinish.remove(position);
             adapterFinish.notifyItemRemoved(position);
-            saveMacListFinish();
+            track.saveMacListFinish(macListFinish);
         });
+
+        macAddressesFinish.setLayoutManager(new LinearLayoutManager(getContext()));
+        macAddressesFinish.setAdapter(adapterFinish);
 
         Button btnStartAddress = v.findViewById(R.id.button_add_start_address);
         btnStartAddress.setOnClickListener(new View.OnClickListener() {
@@ -102,7 +105,7 @@ public class TracksFragment extends Fragment {
                 String address = name.getText().toString();
                 macListStart.add(new MacAddress(address));
                 adapterStart.notifyItemInserted(macListStart.size()-1);
-                saveMacListStart();
+                track.saveMacListStart(macListStart);
                 name.setText("");
             }
         });
@@ -115,60 +118,15 @@ public class TracksFragment extends Fragment {
                 String address = name.getText().toString();
                 macListFinish.add(new MacAddress(address));
                 adapterFinish.notifyItemInserted(macListFinish.size()-1);
-                saveMacListFinish();
+                track.saveMacListFinish(macListFinish);
                 name.setText("");
             }
         });
 
-        macAddressesFinish.setLayoutManager(new LinearLayoutManager(getContext()));
-        macAddressesFinish.setAdapter(adapterFinish);
+
 
         return v;
     }
 
-    private void saveMacListStart() {
-        SharedPreferences prefs = requireContext().getSharedPreferences("mac_prefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        ArrayList<String> macs = new ArrayList<>();
-        for (MacAddress item : macListStart) {
-            macs.add(item.getAddress());
-        }
-        editor.putString(trackName+"_start", TextUtils.join(",", macs));
-        editor.apply();
-    }
 
-    private void saveMacListFinish() {
-        SharedPreferences prefs = requireContext().getSharedPreferences("mac_prefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        ArrayList<String> macs = new ArrayList<>();
-        for (MacAddress item : macListFinish) {
-            macs.add(item.getAddress());
-        }
-        editor.putString(trackName+"_finish", TextUtils.join(",", macs));
-        editor.apply();
-    }
-
-    private ArrayList<MacAddress> loadMacListStart() {
-        SharedPreferences prefs = requireContext().getSharedPreferences("mac_prefs", Context.MODE_PRIVATE);
-        String saved = prefs.getString(trackName+"_start", "");
-        ArrayList<MacAddress> list = new ArrayList<>();
-        if (!saved.isEmpty()) {
-            for (String mac : saved.split(",")) {
-                list.add(new MacAddress(mac));
-            }
-        }
-        return list;
-    }
-
-    private ArrayList<MacAddress> loadMacListFinish() {
-        SharedPreferences prefs = requireContext().getSharedPreferences("mac_prefs", Context.MODE_PRIVATE);
-        String saved = prefs.getString(trackName+"_finish", "");
-        ArrayList<MacAddress> list = new ArrayList<>();
-        if (!saved.isEmpty()) {
-            for (String mac : saved.split(",")) {
-                list.add(new MacAddress(mac));
-            }
-        }
-        return list;
-    }
 }
