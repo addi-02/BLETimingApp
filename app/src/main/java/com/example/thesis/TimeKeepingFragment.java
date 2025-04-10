@@ -43,6 +43,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 public class TimeKeepingFragment extends Fragment {
@@ -66,6 +67,7 @@ public class TimeKeepingFragment extends Fragment {
     private SimpleMovingAverageFilter smaFilter = new SimpleMovingAverageFilter();
     private ArrayList<Double> rssiResults = new ArrayList<Double>();
     private ArrayList<String> timestamps = new ArrayList<String>();
+
     private boolean isScanning = false;
     private static final int REQUEST_CODE_PERMISSIONS = 1001;
     private BluetoothAdapter bluetoothAdapter;
@@ -83,12 +85,10 @@ public class TimeKeepingFragment extends Fragment {
             ArrayList<Track> tracks = tm.getTracks();
             for(Track track : tracks) {
                 if(Arrays.asList(track.getAddressStrings("start")).contains(deviceAddress)) {
-                    rssiResults.add((double)result.getRssi());
-                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-                    timestamps.add(timestamp.toString());
-                    rssiData.setValue(String.valueOf(result.getRssi()));
+                    tm.addResult(track, "start", result.getRssi());
 
-                } else if(Arrays.asList(track.getAddressStrings("start")).contains(deviceAddress)){
+                } else if(Arrays.asList(track.getAddressStrings("finish")).contains(deviceAddress)){
+                    tm.addResult(track, "finish", result.getRssi());
 
                 }
             }
@@ -124,6 +124,7 @@ public class TimeKeepingFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        tm.initializeTracks();
     }
 
     @Override
@@ -140,23 +141,40 @@ public class TimeKeepingFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 if(!isScanning) {
-                    ArrayList<Double> filtered = new ArrayList<>();
+                    for(Track track : tm.getTracks()) {
+                        ArrayList<Double> filteredStart = new ArrayList<>();
+                        ArrayList<Double> filteredFinish = new ArrayList<>();
 
-                    try {
-                        filtered = kmnFilter.filterData(rssiResults);
+                        ArrayList<Double> startResults = tm.getTrackResult(track, "start");
+                        ArrayList<Double> finishResults = tm.getTrackResult(track, "finish");
 
-                    } catch (Exception e) {
-                        rssiData.setValue("Filtering failed");
+                        try {
+                            filteredStart = kmnFilter.filterData(startResults);
+                            filteredFinish = kmnFilter.filterData(finishResults);
+
+                        } catch (Exception e) {
+                            rssiData.setValue("Filtering failed");
+                        }
+                        //saveToDownloadsWithMediaStore(requireContext(), filtered, "rssi_values");
+                        try {
+                            double closestStart = Collections.max(filteredStart);
+                            double closestFinish = Collections.max(filteredFinish);
+                            int closestValueStart = filteredStart.indexOf(closestStart);
+                            int closestValueFinish = filteredFinish.indexOf(closestFinish);
+
+                            ArrayList<String> startTimes = tm.getTrackTimestamps(track, "start");
+                            ArrayList<String> finishTimes = tm.getTrackTimestamps(track, "finish");
+
+                            Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
+                            Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
+                            long elapsedTime = finish.getTime() - start.getTime();
+                            textTimestamps.setText(String.valueOf(elapsedTime));
+                        } catch (Exception e) {
+                            //rssiData.setValue("Getting time failed" + filtered.toString());
+                            textTimestamps.setText(timestamps.toString());
+                        }
                     }
-                    saveToDownloadsWithMediaStore(requireContext(), filtered, "rssi_values");
-                    try {
-                        double closest = Collections.max(filtered);
-                        int closestValue = filtered.indexOf(closest);
-                        textTimestamps.setText(timestamps.get(closestValue));
-                    } catch (Exception e) {
-                        rssiData.setValue("Getting time failed" + filtered.toString());
-                        textTimestamps.setText(timestamps.toString());
-                    }
+
 
                 }
             }
