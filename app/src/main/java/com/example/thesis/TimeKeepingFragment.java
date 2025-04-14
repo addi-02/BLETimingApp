@@ -82,16 +82,7 @@ public class TimeKeepingFragment extends Fragment {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             String deviceAddress = result.getDevice().getAddress();
-            ArrayList<Track> tracks = tm.getTracks();
-            for(Track track : tracks) {
-                if(Arrays.asList(track.getAddressStrings("start")).contains(deviceAddress)) {
-                    tm.addResult(track, "start", result.getRssi());
-
-                } else if(Arrays.asList(track.getAddressStrings("finish")).contains(deviceAddress)){
-                    tm.addResult(track, "finish", result.getRssi());
-
-                }
-            }
+            tm.addUnsortedRSSI(deviceAddress, result.getRssi());
         }
 
         @Override
@@ -246,6 +237,7 @@ public class TimeKeepingFragment extends Fragment {
                     startScan();
                 } else {
                     stopScan();
+                    tm.sortResults();
                 }
             }
         });

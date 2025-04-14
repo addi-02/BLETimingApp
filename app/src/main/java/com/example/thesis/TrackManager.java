@@ -12,12 +12,18 @@ import java.util.Map;
 
 public class TrackManager {
     private ArrayList<Track> tracks;
+    private ArrayList<Integer> unsortedRSSI;
+    private ArrayList<String> unsortedRSSIAddresses;
+    private ArrayList<String> unsortedRSSITimestamps;
     private Map<String, Map<String, ArrayList<Double>>> trackResults;
     private Map<String, Map<String, ArrayList<String>>> timestamps;
     private Context context;
 
     public TrackManager(Context context) {
         this.tracks = new ArrayList<>();
+        this.unsortedRSSI = new ArrayList<>();
+        this.unsortedRSSIAddresses = new ArrayList<>();
+        this.unsortedRSSITimestamps = new ArrayList<>();
         this.context = context;
         loadTracks();
     }
@@ -48,16 +54,36 @@ public class TrackManager {
         }
     }
 
-    public void addResult(Track track, String checkpoint, int result) {
-        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+    public void addResult(Track track, String checkpoint, int result, String timestamp) {
         trackResults.get(track.getTrackName()).get(checkpoint).add((double)result);
-        timestamps.get(track.getTrackName()).get(checkpoint).add(timestamp.toString());
+        timestamps.get(track.getTrackName()).get(checkpoint).add(timestamp);
     }
+    public void sortResults() {
+        for(String address : unsortedRSSIAddresses) {
+            int curr = unsortedRSSIAddresses.indexOf(address);
+            for(Track track : tracks) {
+                if(Arrays.asList(track.getAddressStrings("start")).contains(address)) {
+                    addResult(track, "start", unsortedRSSI.get(curr), unsortedRSSITimestamps.get(curr));
 
+                } else if(Arrays.asList(track.getAddressStrings("finish")).contains(address)){
+                    addResult(track, "finish", unsortedRSSI.get(curr), unsortedRSSITimestamps.get(curr));
+
+                }
+            }
+        }
+
+    }
     public ArrayList<Double> getTrackResult(Track track, String checkpoint) {
         return trackResults.get(track.getTrackName()).get(checkpoint);
     }
     public ArrayList<String> getTrackTimestamps(Track track, String checkpoint) {
         return timestamps.get(track.getTrackName()).get(checkpoint);
+    }
+
+    public void addUnsortedRSSI(String address, int value) {
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        this.unsortedRSSI.add(value);
+        this.unsortedRSSIAddresses.add(address);
+        this.unsortedRSSITimestamps.add(timestamp.toString());
     }
 }
