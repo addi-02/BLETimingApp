@@ -2,6 +2,7 @@ package com.example.thesis;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import java.lang.reflect.Array;
 import java.sql.Timestamp;
@@ -21,11 +22,21 @@ public class TrackManager {
 
     public TrackManager(Context context) {
         this.tracks = new ArrayList<>();
+        this.trackResults = new HashMap<>();
         this.unsortedRSSI = new ArrayList<>();
         this.unsortedRSSIAddresses = new ArrayList<>();
         this.unsortedRSSITimestamps = new ArrayList<>();
+        this.timestamps = new HashMap<>();
         this.context = context;
         loadTracks();
+        for(Track track : tracks ) {
+            track.setContext(context);
+            track.loadMacList();
+        }
+    }
+
+    public ArrayList<Integer> getUnsortedRSSI() {
+        return unsortedRSSI;
     }
 
     public ArrayList<Track> getTracks() {
@@ -48,9 +59,15 @@ public class TrackManager {
         Map<String, ArrayList<String>> initialTimestamps = new HashMap<>();
         initialTimestamps.put("start", new ArrayList<String>());
         initialTimestamps.put("finish", new ArrayList<String>());
+
         for(Track track : tracks) {
-            trackResults.put(track.getTrackName(), initialValues);
-            timestamps.put(track.getTrackName(), initialTimestamps);
+            try {
+                trackResults.put(track.getTrackName(), initialValues);
+                timestamps.put(track.getTrackName(), initialTimestamps);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
         }
     }
 
@@ -59,14 +76,14 @@ public class TrackManager {
         timestamps.get(track.getTrackName()).get(checkpoint).add(timestamp);
     }
     public void sortResults() {
-        for(String address : unsortedRSSIAddresses) {
-            int curr = unsortedRSSIAddresses.indexOf(address);
+        for(int i = 0; i < unsortedRSSIAddresses.size(); i++) {
+            String address = unsortedRSSIAddresses.get(i);
             for(Track track : tracks) {
-                if(Arrays.asList(track.getAddressStrings("start")).contains(address)) {
-                    addResult(track, "start", unsortedRSSI.get(curr), unsortedRSSITimestamps.get(curr));
+                if(track.getAddressStrings("start").contains(address)) {
+                    addResult(track, "start", unsortedRSSI.get(i), unsortedRSSITimestamps.get(i));
 
-                } else if(Arrays.asList(track.getAddressStrings("finish")).contains(address)){
-                    addResult(track, "finish", unsortedRSSI.get(curr), unsortedRSSITimestamps.get(curr));
+                } else if(track.getAddressStrings("finish").contains(address)){
+                    addResult(track, "finish", unsortedRSSI.get(i), unsortedRSSITimestamps.get(i));
 
                 }
             }

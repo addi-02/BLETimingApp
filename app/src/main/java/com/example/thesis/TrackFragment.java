@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 
@@ -71,10 +72,11 @@ public class TrackFragment extends Fragment {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_tracks, container, false);
         RecyclerView macAddressesStart = v.findViewById(R.id.rv_mac_addresses_start);
-        track = new Track("addi", new ArrayList<>(), new ArrayList<>());
         track.setContext(requireContext());
         track.loadMacList();
         trackName = track.getTrackName();
+        TextView trackNameView = v.findViewById(R.id.text_track_name);
+        trackNameView.setText(trackName);
         macListStart = track.getAddresses("start");
         macListFinish = track.getAddresses("finish");
 

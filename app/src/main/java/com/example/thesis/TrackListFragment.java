@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -99,12 +101,11 @@ public class TrackListFragment extends Fragment {
             @Override
             public void onItemClick(int position) {
                 String currName = trackNameList.get(position);
-                Fragment editFragment = TrackFragment.newInstance(new Track(currName, new ArrayList<>(), new ArrayList<>()));
-                getParentFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.frameLayout3, editFragment)
-                        .addToBackStack(null)
-                        .commit();
+                Track currTrack = new Track(currName, new ArrayList<>(), new ArrayList<>());
+                NavController navController = Navigation.findNavController(v);
+                Bundle bundle = new Bundle();
+                bundle.putSerializable("arg_track", currTrack);
+                navController.navigate(R.id.trackFragment, bundle);
             }
         });
         return v;
@@ -118,6 +119,7 @@ public class TrackListFragment extends Fragment {
     }
 
     public void loadTrackList() {
+        trackNameList.clear();
         SharedPreferences prefs = requireContext().getSharedPreferences("track_prefs", Context.MODE_PRIVATE);
         String tracks = prefs.getString("track_names", "");
 

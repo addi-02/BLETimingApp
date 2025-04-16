@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/timeKeepingFragment">
+
+    <fragment
+        android:id="@+id/timeKeepingFragment"
+        android:name="com.example.thesis.TimeKeepingFragment"
+        android:label="fragment_time_keeping"
+        tools:layout="@layout/fragment_time_keeping" >
+        <action
+            android:id="@+id/action_timeKeepingFragment_to_trackListFragment"
+            app:destination="@id/trackListFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/trackFragment"
+        android:name="com.example.thesis.TrackFragment"
+        android:label="fragment_tracks"
+        tools:layout="@layout/fragment_tracks" >
+        <action
+            android:id="@+id/action_trackFragment_to_trackListFragment"
+            app:destination="@id/trackListFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/trackListFragment"
+        android:name="com.example.thesis.TrackListFragment"
+        android:label="fragment_track_list"
+        tools:layout="@layout/fragment_track_list" >
+        <action
+            android:id="@+id/action_trackListFragment_to_trackFragment"
+            app:destination="@id/trackFragment" />
+        <action
+            android:id="@+id/action_trackListFragment_to_timeKeepingFragment"
+            app:destination="@id/timeKeepingFragment" />
+    </fragment>
+</navigation>

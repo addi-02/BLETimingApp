@@ -17,6 +17,8 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
 
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -43,6 +45,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -76,7 +79,7 @@ public class TimeKeepingFragment extends Fragment {
     public TimeKeepingFragment() {
         // Required empty public constructor
     }
-    TrackManager tm = new TrackManager(requireContext());
+    TrackManager tm;
 
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
@@ -115,6 +118,7 @@ public class TimeKeepingFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        tm = new TrackManager(requireContext());
         tm.initializeTracks();
     }
 
@@ -124,10 +128,12 @@ public class TimeKeepingFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_time_keeping, container, false);
 
         // Buttons for selection of the individual filtering algorithms
+        TextView textScanning = v.findViewById(R.id.text_is_scanning);
         Button btnKalman = v.findViewById(R.id.button_kalman);
         Button btnEMA = v.findViewById(R.id.button_ema);
         Button btnSMA = v.findViewById(R.id.button_sma);
         TextView textTimestamps = v.findViewById(R.id.text_timestamps);
+        TextView textTimestamps2 = v.findViewById(R.id.text_timestamps2);
         btnKalman.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -159,7 +165,9 @@ public class TimeKeepingFragment extends Fragment {
                             Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
                             Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
                             long elapsedTime = finish.getTime() - start.getTime();
-                            textTimestamps.setText(String.valueOf(elapsedTime));
+                            textScanning.setText(String.valueOf(elapsedTime));
+                            textTimestamps.setText(String.valueOf(start));
+                            textTimestamps2.setText(String.valueOf(finish));
                         } catch (Exception e) {
                             //rssiData.setValue("Getting time failed" + filtered.toString());
                             textTimestamps.setText(timestamps.toString());
@@ -223,13 +231,21 @@ public class TimeKeepingFragment extends Fragment {
             }
         });
 
+        Button btnTracks = v.findViewById(R.id.button_tracks);
+        btnTracks.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                NavController navController = Navigation.findNavController(view);
+                navController.navigate(R.id.trackListFragment);
+            }
+        });
+
         // Initialization of the Bluetooth classes
         BluetoothManager bluetoothManager = (BluetoothManager) requireContext().getSystemService(getContext().BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
 
         Button btnStartScan = v.findViewById(R.id.button_start_scan);
-        TextView textScanning = v.findViewById(R.id.text_is_scanning);
         btnStartScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -238,7 +254,9 @@ public class TimeKeepingFragment extends Fragment {
                 } else {
                     stopScan();
                     tm.sortResults();
+
                 }
+
             }
         });
 
