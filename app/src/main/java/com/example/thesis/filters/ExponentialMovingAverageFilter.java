@@ -3,12 +3,13 @@ package com.example.thesis.filters;
 import java.util.ArrayList;
 
 public class ExponentialMovingAverageFilter {
-
+    private ArrayList<Double> recentResultsStart;
+    private ArrayList<Double> recentResultsFinish;
     public ExponentialMovingAverageFilter() {
 
     }
 
-    public ArrayList<Double> filterData(ArrayList<Double> data) {
+    public ArrayList<Double> filterData(ArrayList<Double> data, Boolean isStart) {
         int n = 5;
         double a = (double) 2 /(n+1);
         double prevRSSI = data.get(0);
@@ -24,6 +25,18 @@ public class ExponentialMovingAverageFilter {
             filteredData.add(newRSSI);
             prevRSSI = newRSSI;
         }
+        if(isStart) {
+            recentResultsStart = filteredData;
+        } else {
+            recentResultsFinish = filteredData;
+        }
         return filteredData;
+    }
+
+    public ArrayList<Double> getRecentResultsStart() {
+        return recentResultsStart;
+    }
+    public ArrayList<Double> getRecentResultsFinish() {
+        return recentResultsFinish;
     }
 }
