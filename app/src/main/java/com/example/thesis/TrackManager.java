@@ -35,6 +35,13 @@ public class TrackManager {
         }
     }
 
+    public void cleanManager() {
+        this.unsortedRSSI.clear();
+        this.unsortedRSSIAddresses.clear();
+        this.unsortedRSSITimestamps.clear();
+        initializeTracks();
+    }
+
     public ArrayList<Integer> getUnsortedRSSI() {
         return unsortedRSSI;
     }
@@ -52,16 +59,16 @@ public class TrackManager {
     }
 
     public void initializeTracks() {
-        Map<String, ArrayList<Double>> initialValues = new HashMap<>();
-        initialValues.put("start", new ArrayList<Double>());
-        initialValues.put("finish", new ArrayList<Double>());
-
-        Map<String, ArrayList<String>> initialTimestamps = new HashMap<>();
-        initialTimestamps.put("start", new ArrayList<String>());
-        initialTimestamps.put("finish", new ArrayList<String>());
-
         for(Track track : tracks) {
             try {
+                Map<String, ArrayList<Double>> initialValues = new HashMap<>();
+                initialValues.put("start", new ArrayList<Double>());
+                initialValues.put("finish", new ArrayList<Double>());
+
+                Map<String, ArrayList<String>> initialTimestamps = new HashMap<>();
+                initialTimestamps.put("start", new ArrayList<String>());
+                initialTimestamps.put("finish", new ArrayList<String>());
+
                 trackResults.put(track.getTrackName(), initialValues);
                 timestamps.put(track.getTrackName(), initialTimestamps);
             } catch (Exception e) {

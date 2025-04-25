@@ -210,10 +210,10 @@ public class TimeKeepingFragment extends Fragment {
                             rssiData.setValue("Filtering failed");
                         }
                         Timestamp date = new Timestamp(System.currentTimeMillis());
-                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "ema_values_start" + date);
-                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "ema_values_start" + date);
-                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
-                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "ema_values_start" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "ema_values_start" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
                         try {
                             double closestStart = Collections.max(filteredStart);
                             double closestFinish = Collections.max(filteredFinish);
@@ -248,11 +248,11 @@ public class TimeKeepingFragment extends Fragment {
                 public void onNameEntered(String label) {
                     // Example: fullName = "Kalman_MyLabel"
                     saveToDownloadsWithMediaStore(requireContext(), kmnFilter.getRecentResultsStart(), "kmn_values_start_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), kmnFilter.getRecentResultsFinish(), "kmn_values_start_" + label);
+                    saveToDownloadsWithMediaStore(requireContext(), kmnFilter.getRecentResultsFinish(), "kmn_values_finish_" + label);
                     saveToDownloadsWithMediaStore(requireContext(), emaFilter.getRecentResultsStart(), "ema_values_start_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), emaFilter.getRecentResultsFinish(), "ema_valsues_start_" + label);
+                    saveToDownloadsWithMediaStore(requireContext(), emaFilter.getRecentResultsFinish(), "ema_values_finish_" + label);
                     saveToDownloadsWithMediaStore(requireContext(), smaFilter.getRecentResultsStart(), "sma_values_start_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), smaFilter.getRecentResultsFinish(), "sma_values_start_" + label);
+                    saveToDownloadsWithMediaStore(requireContext(), smaFilter.getRecentResultsFinish(), "sma_values_finish_" + label);
                     saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "start"), "rssi_values_start_times_" + label);
                     saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "finish"), "rssi_values_finish_times_" + label);
 
@@ -281,10 +281,10 @@ public class TimeKeepingFragment extends Fragment {
                             rssiData.setValue("Filtering failed");
                         }
                         Timestamp date = new Timestamp(System.currentTimeMillis());
-                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "sma_values_start" + date);
-                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "sma_values_start" + date);
-                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
-                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "sma_values_start" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "sma_values_start" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
                         try {
                             double closestStart = Collections.max(filteredStart);
                             double closestFinish = Collections.max(filteredFinish);
@@ -330,6 +330,7 @@ public class TimeKeepingFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 if (!isScanning) {
+                    tm.cleanManager();
                     startScan();
                 } else {
                     stopScan();
