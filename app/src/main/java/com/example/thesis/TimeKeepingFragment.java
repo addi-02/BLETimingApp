@@ -84,9 +84,10 @@ public class TimeKeepingFragment extends Fragment {
     public TimeKeepingFragment() {
         // Required empty public constructor
     }
-
+    ScanFilter filter;
     TrackManager tm;
-
+    List<ScanFilter> filters;
+    ScanSettings scanSettings;
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
@@ -127,6 +128,10 @@ public class TimeKeepingFragment extends Fragment {
         }
         tm = new TrackManager(requireContext());
         tm.initializeTracks();
+        filter = new ScanFilter.Builder()
+                .build();
+        filters = new ArrayList<>();
+        filters.add(filter);
     }
 
     @Override
@@ -139,6 +144,9 @@ public class TimeKeepingFragment extends Fragment {
         Button btnKalman = v.findViewById(R.id.button_kalman);
         Button btnEMA = v.findViewById(R.id.button_ema);
         Button btnSMA = v.findViewById(R.id.button_sma);
+        Button btnLow = v.findViewById(R.id.button_low_latency);
+        Button btnBal = v.findViewById(R.id.button_balanced);
+        Button btnHigh = v.findViewById(R.id.button_low_power);
         TextView textTimestamps = v.findViewById(R.id.text_timestamps);
         TextView textTimestamps2 = v.findViewById(R.id.text_timestamps2);
         TextView textStartSignals = v.findViewById(R.id.text_start_signals);
@@ -210,10 +218,6 @@ public class TimeKeepingFragment extends Fragment {
                             rssiData.setValue("Filtering failed");
                         }
                         Timestamp date = new Timestamp(System.currentTimeMillis());
-//                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "ema_values_start" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "ema_values_start" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
                         try {
                             double closestStart = Collections.max(filteredStart);
                             double closestFinish = Collections.max(filteredFinish);
@@ -281,10 +285,6 @@ public class TimeKeepingFragment extends Fragment {
                             rssiData.setValue("Filtering failed");
                         }
                         Timestamp date = new Timestamp(System.currentTimeMillis());
-//                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "sma_values_start" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "sma_values_start" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
                         try {
                             double closestStart = Collections.max(filteredStart);
                             double closestFinish = Collections.max(filteredFinish);
@@ -310,13 +310,45 @@ public class TimeKeepingFragment extends Fragment {
                 }
             }
         });
-
+        btnLow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                scanSettings = new ScanSettings.Builder()
+                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
+                        .build();
+            }
+        });
+        btnBal.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                scanSettings = new ScanSettings.Builder()
+                        .setScanMode(ScanSettings.SCAN_MODE_BALANCED) // or BALANCED, LOW_POWER, etc.
+                        .build();
+            }
+        });
+        btnHigh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                scanSettings = new ScanSettings.Builder()
+                        .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER) // or BALANCED, LOW_POWER, etc.
+                        .build();
+            }
+        });
         Button btnTracks = v.findViewById(R.id.button_tracks);
         btnTracks.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 NavController navController = Navigation.findNavController(view);
                 navController.navigate(R.id.trackListFragment);
+            }
+        });
+
+        Button btnStopwatch = v.findViewById(R.id.button_stopwatch);
+        btnStopwatch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                NavController navController = Navigation.findNavController(view);
+                navController.navigate(R.id.stopwatchFragment);
             }
         });
 
@@ -335,6 +367,36 @@ public class TimeKeepingFragment extends Fragment {
                 } else {
                     stopScan();
                     tm.sortResults();
+                    for (Track track : tm.getTracks()) {
+
+                        ArrayList<Double> startResults = tm.getTrackResult(track, "start");
+                        ArrayList<Double> finishResults = tm.getTrackResult(track, "finish");
+
+//                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "sma_values_start" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "sma_values_start" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
+//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
+                        try {
+                            double closestStart = Collections.max(startResults);
+                            double closestFinish = Collections.max(finishResults);
+                            int closestValueStart = startResults.indexOf(closestStart);
+                            int closestValueFinish = finishResults.indexOf(closestFinish);
+
+                            ArrayList<String> startTimes = tm.getTrackTimestamps(track, "start");
+                            ArrayList<String> finishTimes = tm.getTrackTimestamps(track, "finish");
+
+                            Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
+                            Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
+                            long elapsedTime = finish.getTime() - start.getTime();
+                            textScanning.setText(String.valueOf(elapsedTime));
+                            textTimestamps.setText(String.valueOf(start));
+                            textTimestamps2.setText(String.valueOf(finish));
+                        } catch (Exception e) {
+                            textTimestamps.setText(timestamps.toString());
+                        }
+                    }
+
+
 
                 }
 
@@ -359,13 +421,10 @@ public class TimeKeepingFragment extends Fragment {
                 ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
             if (bluetoothLeScanner != null) {
-                ScanSettings scanSettings = new ScanSettings.Builder()
-                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
-                        .build();
-                ScanFilter filter = new ScanFilter.Builder()
-                        .build();
-                List<ScanFilter> filters = new ArrayList<>();
-                filters.add(filter);
+//                ScanSettings scanSettings = new ScanSettings.Builder()
+//                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
+//                        .build();
+
                 // Starts the BLE scanner using the callback function to define wanted behaviour upon receiving a signal
                 bluetoothLeScanner.startScan(filters, scanSettings, scanCallback);
                 isScanning = true;

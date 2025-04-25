@@ -13,6 +13,9 @@
         <action
             android:id="@+id/action_timeKeepingFragment_to_trackListFragment"
             app:destination="@id/trackListFragment" />
+        <action
+            android:id="@+id/action_timeKeepingFragment_to_stopwatchFragment"
+            app:destination="@id/stopwatchFragment" />
     </fragment>
     <fragment
         android:id="@+id/trackFragment"
@@ -33,6 +36,15 @@
             app:destination="@id/trackFragment" />
         <action
             android:id="@+id/action_trackListFragment_to_timeKeepingFragment"
+            app:destination="@id/timeKeepingFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/stopwatchFragment"
+        android:name="com.example.thesis.StopwatchFragment"
+        android:label="fragment_stopwatch"
+        tools:layout="@layout/fragment_stopwatch" >
+        <action
+            android:id="@+id/action_stopwatchFragment_to_timeKeepingFragment"
             app:destination="@id/timeKeepingFragment" />
     </fragment>
 </navigation>
