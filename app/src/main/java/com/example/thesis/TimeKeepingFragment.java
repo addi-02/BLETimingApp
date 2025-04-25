@@ -84,10 +84,8 @@ public class TimeKeepingFragment extends Fragment {
     public TimeKeepingFragment() {
         // Required empty public constructor
     }
-    ScanFilter filter;
+
     TrackManager tm;
-    List<ScanFilter> filters;
-    ScanSettings scanSettings;
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
@@ -128,10 +126,7 @@ public class TimeKeepingFragment extends Fragment {
         }
         tm = new TrackManager(requireContext());
         tm.initializeTracks();
-        filter = new ScanFilter.Builder()
-                .build();
-        filters = new ArrayList<>();
-        filters.add(filter);
+
     }
 
     @Override
@@ -257,6 +252,9 @@ public class TimeKeepingFragment extends Fragment {
                     saveToDownloadsWithMediaStore(requireContext(), emaFilter.getRecentResultsFinish(), "ema_values_finish_" + label);
                     saveToDownloadsWithMediaStore(requireContext(), smaFilter.getRecentResultsStart(), "sma_values_start_" + label);
                     saveToDownloadsWithMediaStore(requireContext(), smaFilter.getRecentResultsFinish(), "sma_values_finish_" + label);
+                    saveToDownloadsWithMediaStore(requireContext(), tm.getTrackResult(tm.getTracks().get(0), "start"), "unfiltered_values_start_" + label);
+                    saveToDownloadsWithMediaStore(requireContext(), tm.getTrackResult(tm.getTracks().get(0), "finish"), "unfiltered_values_finish_" + label);
+
                     saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "start"), "rssi_values_start_times_" + label);
                     saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "finish"), "rssi_values_finish_times_" + label);
 
@@ -310,30 +308,30 @@ public class TimeKeepingFragment extends Fragment {
                 }
             }
         });
-        btnLow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                scanSettings = new ScanSettings.Builder()
-                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
-                        .build();
-            }
-        });
-        btnBal.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                scanSettings = new ScanSettings.Builder()
-                        .setScanMode(ScanSettings.SCAN_MODE_BALANCED) // or BALANCED, LOW_POWER, etc.
-                        .build();
-            }
-        });
-        btnHigh.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                scanSettings = new ScanSettings.Builder()
-                        .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER) // or BALANCED, LOW_POWER, etc.
-                        .build();
-            }
-        });
+//        btnLow.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                scanSettings = new ScanSettings.Builder()
+//                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
+//                        .build();
+//            }
+//        });
+//        btnBal.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                scanSettings = new ScanSettings.Builder()
+//                        .setScanMode(ScanSettings.SCAN_MODE_BALANCED) // or BALANCED, LOW_POWER, etc.
+//                        .build();
+//            }
+//        });
+//        btnHigh.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                scanSettings = new ScanSettings.Builder()
+//                        .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER) // or BALANCED, LOW_POWER, etc.
+//                        .build();
+//            }
+//        });
         Button btnTracks = v.findViewById(R.id.button_tracks);
         btnTracks.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -362,7 +360,6 @@ public class TimeKeepingFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 if (!isScanning) {
-                    tm.cleanManager();
                     startScan();
                 } else {
                     stopScan();
@@ -395,9 +392,6 @@ public class TimeKeepingFragment extends Fragment {
                             textTimestamps.setText(timestamps.toString());
                         }
                     }
-
-
-
                 }
 
             }
@@ -421,10 +415,13 @@ public class TimeKeepingFragment extends Fragment {
                 ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
             if (bluetoothLeScanner != null) {
-//                ScanSettings scanSettings = new ScanSettings.Builder()
-//                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
-//                        .build();
-
+                ScanSettings scanSettings = new ScanSettings.Builder()
+                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
+                        .build();
+                ScanFilter filter = new ScanFilter.Builder()
+                        .build();
+                List<ScanFilter> filters = new ArrayList<>();
+                filters.add(filter);
                 // Starts the BLE scanner using the callback function to define wanted behaviour upon receiving a signal
                 bluetoothLeScanner.startScan(filters, scanSettings, scanCallback);
                 isScanning = true;
