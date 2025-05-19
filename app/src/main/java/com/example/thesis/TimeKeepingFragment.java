@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.MutableLiveData;
@@ -48,10 +49,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public class TimeKeepingFragment extends Fragment {
 
@@ -69,23 +72,24 @@ public class TimeKeepingFragment extends Fragment {
      * create an instance of this fragment.
      */
 
-    private KalmanFilter kmnFilter = new KalmanFilter();
-    private ExponentialMovingAverageFilter emaFilter = new ExponentialMovingAverageFilter();
-    private SimpleMovingAverageFilter smaFilter = new SimpleMovingAverageFilter();
-    private ArrayList<Double> rssiResults = new ArrayList<Double>();
-    private ArrayList<String> timestamps = new ArrayList<String>();
+    private KalmanFilter kmnFilter;
+    private ExponentialMovingAverageFilter emaFilter;
+    private SimpleMovingAverageFilter smaFilter;
+    private ArrayList<String> timestamps;
 
     private boolean isScanning = false;
     private static final int REQUEST_CODE_PERMISSIONS = 1001;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
-    private MutableLiveData<String> rssiData = new MutableLiveData<>();
+    private MutableLiveData<String> rssiData;
 
     public TimeKeepingFragment() {
         // Required empty public constructor
     }
 
     TrackManager tm;
+
+    // This Callback defines what happens upon receiving a signal
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
@@ -126,7 +130,11 @@ public class TimeKeepingFragment extends Fragment {
         }
         tm = new TrackManager(requireContext());
         tm.initializeTracks();
-
+        kmnFilter = new KalmanFilter();
+        emaFilter = new ExponentialMovingAverageFilter();
+        smaFilter = new SimpleMovingAverageFilter();
+        timestamps = new ArrayList<>();
+        rssiData = new MutableLiveData<>();
     }
 
     @Override
@@ -139,9 +147,6 @@ public class TimeKeepingFragment extends Fragment {
         Button btnKalman = v.findViewById(R.id.button_kalman);
         Button btnEMA = v.findViewById(R.id.button_ema);
         Button btnSMA = v.findViewById(R.id.button_sma);
-        Button btnLow = v.findViewById(R.id.button_low_latency);
-        Button btnBal = v.findViewById(R.id.button_balanced);
-        Button btnHigh = v.findViewById(R.id.button_low_power);
         TextView textTimestamps = v.findViewById(R.id.text_timestamps);
         TextView textTimestamps2 = v.findViewById(R.id.text_timestamps2);
         TextView textStartSignals = v.findViewById(R.id.text_start_signals);
@@ -160,31 +165,25 @@ public class TimeKeepingFragment extends Fragment {
                         try {
                             filteredStart = kmnFilter.filterData(startResults, true);
                             filteredFinish = kmnFilter.filterData(finishResults, false);
+                            filteredStart = new ArrayList<>(filteredStart.subList(filteredStart.size() / 10, filteredStart.size()));
+
+
 
                         } catch (Exception e) {
                             rssiData.setValue("Filtering failed");
                         }
-                        Timestamp date = new Timestamp(System.currentTimeMillis());
 
                         try {
-                            double closestStart = Collections.max(filteredStart);
-                            double closestFinish = Collections.max(filteredFinish);
-                            int closestValueStart = filteredStart.indexOf(closestStart);
-                            int closestValueFinish = filteredFinish.indexOf(closestFinish);
-
-                            ArrayList<String> startTimes = tm.getTrackTimestamps(track, "start");
-                            ArrayList<String> finishTimes = tm.getTrackTimestamps(track, "finish");
-
-                            Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
-                            Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
-                            long elapsedTime = finish.getTime() - start.getTime();
-                            textScanning.setText(String.valueOf(elapsedTime));
-                            textTimestamps.setText(String.valueOf(start));
-                            textTimestamps2.setText(String.valueOf(finish));
+                            HashMap<String, String> times = tm.getElapsedTime(track, filteredStart, filteredFinish);
+                            String formattedTime = times.get("elapsed");
+                            // The code below just displays the elapsed time and timestamps in the
+                            // view, this can be swapped out for sending them to a database instead, etc
+                            textScanning.setText(formattedTime);
+                            textTimestamps.setText(String.valueOf(times.get("start")));
+                            textTimestamps2.setText(String.valueOf(times.get("finish")));
                             textStartSignals.setText(String.valueOf(filteredStart.size()));
                             textFinishSignals.setText(String.valueOf(filteredFinish.size()));
                         } catch (Exception e) {
-                            //rssiData.setValue("Getting time failed" + filtered.toString());
                             textTimestamps.setText(timestamps.toString());
                         }
                     }
@@ -209,25 +208,21 @@ public class TimeKeepingFragment extends Fragment {
                             filteredStart = emaFilter.filterData(startResults, true);
                             filteredFinish = emaFilter.filterData(finishResults, false);
 
+                            filteredStart = new ArrayList<>(filteredStart.subList(filteredStart.size() / 10, filteredStart.size()));
+
                         } catch (Exception e) {
                             rssiData.setValue("Filtering failed");
                         }
-                        Timestamp date = new Timestamp(System.currentTimeMillis());
                         try {
-                            double closestStart = Collections.max(filteredStart);
-                            double closestFinish = Collections.max(filteredFinish);
-                            int closestValueStart = filteredStart.indexOf(closestStart);
-                            int closestValueFinish = filteredFinish.indexOf(closestFinish);
-
-                            ArrayList<String> startTimes = tm.getTrackTimestamps(track, "start");
-                            ArrayList<String> finishTimes = tm.getTrackTimestamps(track, "finish");
-
-                            Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
-                            Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
-                            long elapsedTime = finish.getTime() - start.getTime();
-                            textScanning.setText(String.valueOf(elapsedTime));
-                            textTimestamps.setText(String.valueOf(start));
-                            textTimestamps2.setText(String.valueOf(finish));
+                            HashMap<String, String> times = tm.getElapsedTime(track, filteredStart, filteredFinish);
+                            String formattedTime = times.get("elapsed");
+                            // The code below just displays the elapsed time and timestamps in the
+                            // view, this can be swapped out for sending them to a database instead, etc
+                            textScanning.setText(formattedTime);
+                            textTimestamps.setText(String.valueOf(times.get("start")));
+                            textTimestamps2.setText(String.valueOf(times.get("finish")));
+                            textStartSignals.setText(String.valueOf(filteredStart.size()));
+                            textFinishSignals.setText(String.valueOf(filteredFinish.size()));
                         } catch (Exception e) {
                             //rssiData.setValue("Getting time failed" + filtered.toString());
                             textTimestamps.setText(timestamps.toString());
@@ -238,31 +233,7 @@ public class TimeKeepingFragment extends Fragment {
             }
         });
 
-        Button btnSave = v.findViewById(R.id.button_save_results);
-        btnSave.setOnClickListener(view -> {
-            String filterUsed = "Kalman"; // Or "EMA", "SMA" — set this dynamically
 
-            ResultsLabelFragment dialog = new ResultsLabelFragment(filterUsed, new ResultsLabelFragment.OnNameEnteredListener() {
-                @Override
-                public void onNameEntered(String label) {
-                    // Example: fullName = "Kalman_MyLabel"
-                    saveToDownloadsWithMediaStore(requireContext(), kmnFilter.getRecentResultsStart(), "kmn_values_start_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), kmnFilter.getRecentResultsFinish(), "kmn_values_finish_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), emaFilter.getRecentResultsStart(), "ema_values_start_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), emaFilter.getRecentResultsFinish(), "ema_values_finish_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), smaFilter.getRecentResultsStart(), "sma_values_start_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), smaFilter.getRecentResultsFinish(), "sma_values_finish_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), tm.getTrackResult(tm.getTracks().get(0), "start"), "unfiltered_values_start_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), tm.getTrackResult(tm.getTracks().get(0), "finish"), "unfiltered_values_finish_" + label);
-
-                    saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "start"), "rssi_values_start_times_" + label);
-                    saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "finish"), "rssi_values_finish_times_" + label);
-
-                }
-            });
-
-            dialog.show(getParentFragmentManager(), "SaveNameDialog");
-        });
 
         btnSMA.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -279,25 +250,22 @@ public class TimeKeepingFragment extends Fragment {
                             filteredStart = smaFilter.filterData(startResults, true);
                             filteredFinish = smaFilter.filterData(finishResults, false);
 
+                            filteredStart = new ArrayList<>(filteredStart.subList(filteredStart.size() / 10, filteredStart.size()));
+
                         } catch (Exception e) {
                             rssiData.setValue("Filtering failed");
                         }
                         Timestamp date = new Timestamp(System.currentTimeMillis());
                         try {
-                            double closestStart = Collections.max(filteredStart);
-                            double closestFinish = Collections.max(filteredFinish);
-                            int closestValueStart = filteredStart.indexOf(closestStart);
-                            int closestValueFinish = filteredFinish.indexOf(closestFinish);
-
-                            ArrayList<String> startTimes = tm.getTrackTimestamps(track, "start");
-                            ArrayList<String> finishTimes = tm.getTrackTimestamps(track, "finish");
-
-                            Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
-                            Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
-                            long elapsedTime = finish.getTime() - start.getTime();
-                            textScanning.setText(String.valueOf(elapsedTime));
-                            textTimestamps.setText(String.valueOf(start));
-                            textTimestamps2.setText(String.valueOf(finish));
+                            HashMap<String, String> times = tm.getElapsedTime(track, filteredStart, filteredFinish);
+                            String formattedTime = times.get("elapsed");
+                            // The code below just displays the elapsed time and timestamps in the
+                            // view, this can be swapped out for sending them to a database instead, etc
+                            textScanning.setText(formattedTime);
+                            textTimestamps.setText(String.valueOf(times.get("start")));
+                            textTimestamps2.setText(String.valueOf(times.get("finish")));
+                            textStartSignals.setText(String.valueOf(filteredStart.size()));
+                            textFinishSignals.setText(String.valueOf(filteredFinish.size()));
                         } catch (Exception e) {
                             //rssiData.setValue("Getting time failed" + filtered.toString());
                             textTimestamps.setText(timestamps.toString());
@@ -308,30 +276,33 @@ public class TimeKeepingFragment extends Fragment {
                 }
             }
         });
-//        btnLow.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                scanSettings = new ScanSettings.Builder()
-//                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) // or BALANCED, LOW_POWER, etc.
-//                        .build();
-//            }
-//        });
-//        btnBal.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                scanSettings = new ScanSettings.Builder()
-//                        .setScanMode(ScanSettings.SCAN_MODE_BALANCED) // or BALANCED, LOW_POWER, etc.
-//                        .build();
-//            }
-//        });
-//        btnHigh.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                scanSettings = new ScanSettings.Builder()
-//                        .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER) // or BALANCED, LOW_POWER, etc.
-//                        .build();
-//            }
-//        });
+
+        Button btnSave = v.findViewById(R.id.button_save_results);
+        btnSave.setOnClickListener(view -> {
+
+            ResultsLabelFragment dialog = new ResultsLabelFragment(new ResultsLabelFragment.OnNameEnteredListener() {
+                // Saves the results from all filters and the unfiltered values
+                // to media storage with the inputted suffix as the file name
+                @Override
+                public void onNameEntered(String label) {
+                    saveToStorage(requireContext(), kmnFilter.getRecentResultsStart(), "kmn_values_start_" + label);
+                    saveToStorage(requireContext(), kmnFilter.getRecentResultsFinish(), "kmn_values_finish_" + label);
+                    saveToStorage(requireContext(), emaFilter.getRecentResultsStart(), "ema_values_start_" + label);
+                    saveToStorage(requireContext(), emaFilter.getRecentResultsFinish(), "ema_values_finish_" + label);
+                    saveToStorage(requireContext(), smaFilter.getRecentResultsStart(), "sma_values_start_" + label);
+                    saveToStorage(requireContext(), smaFilter.getRecentResultsFinish(), "sma_values_finish_" + label);
+                    saveToStorage(requireContext(), tm.getTrackResult(tm.getTracks().get(0), "start"), "unfiltered_values_start_" + label);
+                    saveToStorage(requireContext(), tm.getTrackResult(tm.getTracks().get(0), "finish"), "unfiltered_values_finish_" + label);
+
+                    saveToStorage(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "start"), "rssi_values_start_times_" + label);
+                    saveToStorage(requireContext(), tm.getTrackTimestamps(tm.getTracks().get(0), "finish"), "rssi_values_finish_times_" + label);
+
+                }
+            });
+
+            dialog.show(getParentFragmentManager(), "SaveNameDialog");
+        });
+
         Button btnTracks = v.findViewById(R.id.button_tracks);
         btnTracks.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -369,25 +340,16 @@ public class TimeKeepingFragment extends Fragment {
                         ArrayList<Double> startResults = tm.getTrackResult(track, "start");
                         ArrayList<Double> finishResults = tm.getTrackResult(track, "finish");
 
-//                        saveToDownloadsWithMediaStore(requireContext(), filteredStart, "sma_values_start" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), filteredFinish, "sma_values_start" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "start"), "rssi_values_start_times" + date);
-//                        saveToDownloadsWithMediaStore(requireContext(), tm.getTrackTimestamps(track, "finish"), "rssi_values_finish_times" + date);
                         try {
-                            double closestStart = Collections.max(startResults);
-                            double closestFinish = Collections.max(finishResults);
-                            int closestValueStart = startResults.indexOf(closestStart);
-                            int closestValueFinish = finishResults.indexOf(closestFinish);
-
-                            ArrayList<String> startTimes = tm.getTrackTimestamps(track, "start");
-                            ArrayList<String> finishTimes = tm.getTrackTimestamps(track, "finish");
-
-                            Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
-                            Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
-                            long elapsedTime = finish.getTime() - start.getTime();
-                            textScanning.setText(String.valueOf(elapsedTime));
-                            textTimestamps.setText(String.valueOf(start));
-                            textTimestamps2.setText(String.valueOf(finish));
+                            HashMap<String, String> times = tm.getElapsedTime(track, startResults, finishResults);
+                            String formattedTime = times.get("elapsed");
+                            // The code below just displays the elapsed time and timestamps in the
+                            // view, this can be swapped out for sending them to a database instead, etc
+                            textScanning.setText(formattedTime);
+                            textTimestamps.setText(String.valueOf(times.get("start")));
+                            textTimestamps2.setText(String.valueOf(times.get("finish")));
+                            textStartSignals.setText(String.valueOf(startResults.size()));
+                            textFinishSignals.setText(String.valueOf(finishResults.size()));
                         } catch (Exception e) {
                             textTimestamps.setText(timestamps.toString());
                         }
@@ -437,27 +399,23 @@ public class TimeKeepingFragment extends Fragment {
         }
     }
 
+    // This can definitely be shortened, it just stops the scanning
     private void stopScan() {
-        if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
             if (bluetoothLeScanner != null) {
-                // Starts the BLE scanner using the callback function to define wanted behaviour upon receiving a signal
-                bluetoothLeScanner.stopScan(scanCallback);
-                isScanning = false;
+                // Stops the scanner
+                if (ActivityCompat.checkSelfPermission(this.getContext(), android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                    bluetoothLeScanner.stopScan(scanCallback);
+                    isScanning = false;
+                }
                 Log.w("TAG", "Bluetooth scanning stopped.");
             } else {
                 Log.e("TAG", "Bluetooth LE Scanner is null.");
             }
-        } else {
-            requestPermissions(new String[]{
-                    android.Manifest.permission.BLUETOOTH_SCAN,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
-            }, REQUEST_CODE_PERMISSIONS);
-        }
     }
 
-    public <T> void saveToDownloadsWithMediaStore(Context context, List<T> data, String filename) {
+    // Saves the inputted list to media storage, it is agnostic to type, so a
+    // list of any data type can be inputted
+    public <T> void saveToStorage(Context context, List<T> data, String filename) {
         String mimeType = "text/plain";
         String relativeLocation = Environment.DIRECTORY_DOWNLOADS;
 

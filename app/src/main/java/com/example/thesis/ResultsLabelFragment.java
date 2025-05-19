@@ -57,10 +57,8 @@ public class ResultsLabelFragment extends DialogFragment {
     }
 
     private OnNameEnteredListener listener;
-    private String filterName;
 
-    public ResultsLabelFragment(String filterName, OnNameEnteredListener listener) {
-        this.filterName = filterName;
+    public ResultsLabelFragment(OnNameEnteredListener listener) {
         this.listener = listener;
     }
 

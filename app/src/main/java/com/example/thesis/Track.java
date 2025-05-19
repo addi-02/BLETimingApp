@@ -29,9 +29,12 @@ public class Track implements Serializable {
         return this.track.keySet().iterator().next();
     }
 
+    // Used to get the MAC address class instances
     public ArrayList<MacAddress> getAddresses(String checkpoint) {
         return this.track.get(getTrackName()).get(checkpoint);
     }
+
+    // Used to get the actual addresses from each MAC address in String form
     public ArrayList<String> getAddressStrings(String checkpoint) {
         ArrayList<String> addresses = new ArrayList<>();
         for(MacAddress address : Objects.requireNonNull(this.track.get(getTrackName()).get(checkpoint))) {
@@ -40,6 +43,7 @@ public class Track implements Serializable {
         return addresses;
     }
 
+    // The functions below save/load the MAC address Strings to/from the phone's storage
     public void saveMacListStart(ArrayList<MacAddress> newAddresses) {
         SharedPreferences prefs = context.getSharedPreferences("mac_prefs", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();

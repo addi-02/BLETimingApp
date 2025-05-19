@@ -11,6 +11,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.sql.Timestamp;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -28,6 +29,8 @@ public class StopwatchFragment extends Fragment {
     private String mParam1;
     private String mParam2;
     private int currCheckpoint;
+    private Timestamp startTime;
+    private Timestamp finishTime;
     public StopwatchFragment() {
         // Required empty public constructor
     }
@@ -66,17 +69,26 @@ public class StopwatchFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_stopwatch, container, false);
         TextView textStart = v.findViewById(R.id.text_start);
         TextView textFinish = v.findViewById(R.id.text_finish);
+        TextView textTime = v.findViewById(R.id.text_time);
         Button btnTakeTime = v.findViewById(R.id.button_take_time);
         Button btnClear = v.findViewById(R.id.button_clear);
 
         btnTakeTime.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                java.sql.Timestamp timestamp = new Timestamp(System.currentTimeMillis());
                 if(currCheckpoint%2 == 0) {
-                    textStart.setText(timestamp.toString());
+                    startTime = new Timestamp(System.currentTimeMillis());
+                    textStart.setText(startTime.toString());
                 } else {
-                    textFinish.setText(timestamp.toString());
+                    finishTime = new Timestamp(System.currentTimeMillis());
+                    textFinish.setText(finishTime.toString());
+                    long elapsedTime = finishTime.getTime() - startTime.getTime();
+                    long minute = TimeUnit.MILLISECONDS.toMinutes(elapsedTime);
+                    long second = TimeUnit.MILLISECONDS.toSeconds(elapsedTime) - TimeUnit.MINUTES.toSeconds(minute);
+                    long millisecond = elapsedTime % 1000;
+
+                    String formattedTime = String.format("%d:%02d.%03d", minute, second, millisecond);
+                    textTime.setText(formattedTime);
                 }
                 currCheckpoint++;
             }
@@ -87,6 +99,7 @@ public class StopwatchFragment extends Fragment {
             public void onClick(View view) {
                 textStart.setText("");
                 textFinish.setText("");
+                currCheckpoint = 0;
             }
         });
         return v;

@@ -3,6 +3,7 @@ package com.example.thesis.filters;
 import java.util.ArrayList;
 
 public class SimpleMovingAverageFilter {
+    // Used to get the results after processing when saving to media storage
     private ArrayList<Double> recentResultsStart;
     private ArrayList<Double> recentResultsFinish;
     public SimpleMovingAverageFilter() {

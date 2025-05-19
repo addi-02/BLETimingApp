@@ -11,11 +11,12 @@ public class KalmanFilter {
     private double p = 0.75;
     private double k = 0.1;
     **/
-    private double q = 0.1;
-    private double r = 2;
+    private double q = 0.0625;
+    private double r = 4;
     private double p = 0.75;
     private double k = 0.1;
 
+    // Used to get the results after processing when saving to media storage
     private ArrayList<Double> recentResultsStart;
     private ArrayList<Double> recentResultsFinish;
     public KalmanFilter() {

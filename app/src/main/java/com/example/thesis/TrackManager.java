@@ -8,8 +8,10 @@ import java.lang.reflect.Array;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class TrackManager {
     private ArrayList<Track> tracks;
@@ -35,21 +37,11 @@ public class TrackManager {
         }
     }
 
-    public void cleanManager() {
-        this.unsortedRSSI.clear();
-        this.unsortedRSSIAddresses.clear();
-        this.unsortedRSSITimestamps.clear();
-        initializeTracks();
-    }
-
-    public ArrayList<Integer> getUnsortedRSSI() {
-        return unsortedRSSI;
-    }
-
     public ArrayList<Track> getTracks() {
         return this.tracks;
     }
 
+    // Loads the saved tracks from media storage
     public void loadTracks(){
         SharedPreferences prefs = context.getSharedPreferences("track_prefs", Context.MODE_PRIVATE);
         String tracks = prefs.getString("track_names", "");
@@ -58,6 +50,31 @@ public class TrackManager {
         }
     }
 
+    // Calculates the elapsed time from the provided filtered (or unfiltered) RSSI values
+    public HashMap<String, String> getElapsedTime(Track track, ArrayList<Double> filteredStart, ArrayList<Double> filteredFinish) {
+        double closestStart = Collections.max(filteredStart);
+        double closestFinish = Collections.max(filteredFinish);
+        int closestValueStart = filteredStart.indexOf(closestStart);
+        int closestValueFinish = filteredFinish.indexOf(closestFinish);
+
+        ArrayList<String> startTimes = this.getTrackTimestamps(track, "start");
+        ArrayList<String> finishTimes = this.getTrackTimestamps(track, "finish");
+
+        Timestamp start = Timestamp.valueOf(startTimes.get(closestValueStart));
+        Timestamp finish = Timestamp.valueOf(finishTimes.get(closestValueFinish));
+        long elapsedTime = finish.getTime() - start.getTime();
+        long minute = TimeUnit.MILLISECONDS.toMinutes(elapsedTime);
+        long second = TimeUnit.MILLISECONDS.toSeconds(elapsedTime) - TimeUnit.MINUTES.toSeconds(minute);
+        long millisecond = elapsedTime % 1000;
+        HashMap<String, String> times = new HashMap<>();
+        String formattedTime = String.format("%d:%02d.%03d", minute, second, millisecond);
+        times.put("elapsed", formattedTime);
+        times.put("start", start.toString());
+        times.put("finish", finish.toString());
+        return times;
+    }
+
+    // Initializes the HashMaps holding all results
     public void initializeTracks() {
         for(Track track : tracks) {
             try {
@@ -78,10 +95,13 @@ public class TrackManager {
         }
     }
 
+    // Adds the signal's RSSI value and timestamp to the correct Track and checkpoint
     public void addResult(Track track, String checkpoint, int result, String timestamp) {
         trackResults.get(track.getTrackName()).get(checkpoint).add((double)result);
         timestamps.get(track.getTrackName()).get(checkpoint).add(timestamp);
     }
+
+    // Associates the unsorted results with their respective Track and checkpoint
     public void sortResults() {
         for(int i = 0; i < unsortedRSSIAddresses.size(); i++) {
             String address = unsortedRSSIAddresses.get(i);
@@ -104,6 +124,9 @@ public class TrackManager {
         return timestamps.get(track.getTrackName()).get(checkpoint);
     }
 
+    // Adds the results to their own lists to be associated with a Track and
+    // checkpoint later, so that the scanCallback doesn't drop any signals
+    // due to prolonged execution
     public void addUnsortedRSSI(String address, int value) {
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         this.unsortedRSSI.add(value);
